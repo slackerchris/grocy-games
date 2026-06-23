@@ -1,0 +1,11 @@
+services:
+  grocy-games:
+    image: ghcr.io/slackerchris/grocy-games:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - GROCY_URL=${GROCY_URL}
+      - GROCY_API_TOKEN=${GROCY_API_TOKEN}
+    restart: unless-stopped
