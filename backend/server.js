@@ -67,6 +67,21 @@ app.get('/api/products/:id', async (req, res) => {
   }
 });
 
+// Get users
+app.get('/api/users', async (req, res) => {
+  try {
+    const response = await fetch(`${GROCY_URL}/api/users`, {
+      headers: grocyHeaders,
+    });
+    if (!response.ok) throw new Error(`Grocy API error: ${response.status}`);
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get locations
 app.get('/api/locations', async (req, res) => {
   try {
@@ -143,6 +158,7 @@ app.post('/api/stock/add', async (req, res) => {
 app.post('/api/stock/remove', async (req, res) => {
   const product_id = parseInt(req.body.product_id, 10);
   const quantity = parseFloat(req.body.quantity);
+  const note = req.body.note || '';
 
   if (isNaN(product_id) || isNaN(quantity) || quantity <= 0) {
     return res.status(400).json({ error: 'Valid product_id and positive quantity required' });
@@ -152,7 +168,7 @@ app.post('/api/stock/remove', async (req, res) => {
     const response = await fetch(`${GROCY_URL}/api/stock/products/${product_id}/consume`, {
       method: 'POST',
       headers: grocyHeaders,
-      body: JSON.stringify({ amount: quantity }),
+      body: JSON.stringify({ amount: quantity, note }),
     });
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));

@@ -34,6 +34,34 @@
   }
 }
 
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 16px 16px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+}
+
+.current-user {
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background 0.15s;
+}
+
+.current-user:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.version {
+  font-family: monospace;
+}
+
 .link-btn {
   background: none;
   border: none;

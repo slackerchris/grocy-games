@@ -4,18 +4,22 @@ import ProductList from './components/ProductList'
 import StockForm from './components/StockForm'
 import Health from './components/Health'
 import GrabView from './components/GrabView'
+import UserPicker from './components/UserPicker'
+
+const STORAGE_KEY = 'grocy-games-user'
 
 function App() {
   const [products, setProducts] = useState([])
   const [stock, setStock] = useState({})
   const [units, setUnits] = useState({})
   const [locations, setLocations] = useState({})
+  const [users, setUsers] = useState([])
+  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem(STORAGE_KEY) || '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [toast, setToast] = useState(null)
   const [showRestock, setShowRestock] = useState(false)
 
-  // NFC routing via URL params
   const params = new URLSearchParams(window.location.search)
   const nfcProductId = params.get('product')
   const nfcLocationId = params.get('location')
@@ -29,11 +33,12 @@ function App() {
     setLoading(true)
     setError(null)
     try {
-      const [productsRes, stockRes, unitsRes, locationsRes] = await Promise.all([
+      const [productsRes, stockRes, unitsRes, locationsRes, usersRes] = await Promise.all([
         fetch('/api/products'),
         fetch('/api/stock'),
         fetch('/api/quantity-units'),
         fetch('/api/locations'),
+        fetch('/api/users'),
       ])
 
       if (!productsRes.ok) throw new Error('Failed to fetch products')
@@ -67,6 +72,12 @@ function App() {
         locationsMap[String(loc.id)] = loc.name
       })
       setLocations(locationsMap)
+
+      // Users are best-effort — some Grocy setups restrict this endpoint
+      if (usersRes.ok) {
+        const usersData = await usersRes.json()
+        setUsers(usersData)
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -78,6 +89,11 @@ function App() {
     fetchData()
   }, [fetchData])
 
+  const handleSelectUser = (name) => {
+    localStorage.setItem(STORAGE_KEY, name)
+    setCurrentUser(name)
+  }
+
   const handleStockUpdate = async (productId, action, quantity) => {
     try {
       const endpoint = action === 'add' ? '/api/stock/add' : '/api/stock/remove'
@@ -87,6 +103,7 @@ function App() {
         body: JSON.stringify({
           product_id: productId,
           quantity: parseFloat(quantity),
+          note: currentUser ? `Grabbed by: ${currentUser}` : '',
         }),
       })
       if (!response.ok) {
@@ -105,11 +122,46 @@ function App() {
     window.history.replaceState(null, '', window.location.pathname)
   }
 
-  // NFC: single product grab view
   const nfcProduct = nfcProductId
     ? products.find(p => String(p.id) === String(nfcProductId))
     : null
 
+  const locationProducts = nfcLocationId
+    ? products.filter(p => String(p.location_id) === String(nfcLocationId))
+    : null
+  const locationName = nfcLocationId ? locations[String(nfcLocationId)] : null
+
+  const footer = (
+    <footer className="app-footer">
+      {currentUser && (
+        <span
+          className="current-user"
+          onClick={() => { localStorage.removeItem(STORAGE_KEY); setCurrentUser('') }}
+          title="Tap to switch user"
+        >
+          👤 {currentUser}
+        </span>
+      )}
+      <span className="version">v{__APP_VERSION__}</span>
+    </footer>
+  )
+
+  // Show user picker if no user selected yet
+  if (!currentUser && !loading) {
+    return (
+      <>
+        <UserPicker users={users} onSelect={handleSelectUser} />
+        <div className="app">
+          <header>
+            <h1>🛒 Grocy Games</h1>
+            <Health />
+          </header>
+        </div>
+      </>
+    )
+  }
+
+  // NFC: single product grab view
   if (nfcProductId && !loading) {
     return (
       <div className="app">
@@ -135,16 +187,12 @@ function App() {
           )}
         </main>
         {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
+        {footer}
       </div>
     )
   }
 
   // NFC: location-filtered grid
-  const locationProducts = nfcLocationId
-    ? products.filter(p => String(p.location_id) === String(nfcLocationId))
-    : null
-  const locationName = nfcLocationId ? locations[String(nfcLocationId)] : null
-
   if (nfcLocationId && !loading) {
     return (
       <div className="app">
@@ -165,14 +213,13 @@ function App() {
                 onStockUpdate={handleStockUpdate}
               />
               <div className="restock-panel">
-                <button className="restock-toggle" onClick={clearNfc}>
-                  ← All Items
-                </button>
+                <button className="restock-toggle" onClick={clearNfc}>← All Items</button>
               </div>
             </>
           )}
         </main>
         {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
+        {footer}
       </div>
     )
   }
@@ -214,6 +261,7 @@ function App() {
       </main>
 
       {toast && <div className={`toast ${toast.type}`}>{toast.message}</div>}
+      {footer}
     </div>
   )
 }

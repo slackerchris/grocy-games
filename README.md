@@ -1,150 +1,112 @@
-# Grocy Games - Simple Inventory Manager
+# Grocy Games v1.1.0
 
-A lightweight web UI for managing your Grocy inventory with simple one-tap actions. Built for ease of use by family members who find Grocy's full interface overwhelming.
+A simple, mobile-first inventory UI for [Grocy](https://grocy.info) — built for family members who find Grocy's full interface overwhelming. Tap to consume, NFC-tag your fridge, and let Grocy handle the tracking.
 
 ## Features
 
-✅ **Simple Interface** - Clean, intuitive design for quick inventory updates  
-✅ **One-Tap Actions** - Add or remove items in seconds  
-✅ **Real-time Sync** - Connected to your Grocy API  
-✅ **Responsive Design** - Works on phones, tablets, and desktops  
-✅ **No Bloat** - Minimal setup, maximum usability  
+- **Tap to consume** — one tap removes stock, no menus needed
+- **Only shows in-stock items** — zero-quantity items are hidden automatically
+- **NFC support** — tag your fridge, pantry, or snack cabinet; scanning opens a filtered view
+- **User tracking** — picks up your Grocy users so each consumption is logged with a name
+- **Quick consume amount** — respects the per-product "quick consume" value set in Grocy
+- **Restock panel** — hidden by default; tap ⚙ to add arbitrary quantities
+- **Health indicator** — collapses to a dot once connected; expands on error
+- **Docker-ready** — single container, pull from GHCR and go
 
-## Project Structure
-
-```
-grocy-games/
-├── backend/                 # Node.js/Express proxy server
-│   ├── server.js           # Main server logic
-│   ├── package.json
-│   └── .env.example
-├── frontend/               # React + Vite frontend
-│   ├── src/
-│   │   ├── components/     # React components
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-└── README.md
-```
-
-## Prerequisites
-
-- Node.js 16+ installed
-- A running Grocy instance (e.g., `http://localhost:81`)
-- Your Grocy API token from Settings → Authentication tokens
-
-## Quick Start
-
-### 1. Clone & Navigate
-```bash
-cd grocy-games
-```
-
-### 2. Setup Backend
+## Quick Start (Docker)
 
 ```bash
-cd backend
-cp .env.example .env
-# Edit .env with your Grocy details
-GROCY_URL=http://localhost:81
-GROCY_API_TOKEN=your_token_here
+docker run -d \
+  -p 5000:5000 \
+  -e GROCY_URL=http://your-grocy-host \
+  -e GROCY_API_TOKEN=your_token \
+  --restart unless-stopped \
+  ghcr.io/slackerchris/grocy-games:latest
 ```
 
-Install dependencies and start:
-```bash
-npm install
-npm start
-```
-
-The backend runs on **http://localhost:5000**
-
-### 3. Setup Frontend (in new terminal)
+Or with Compose — copy `docker-compose.yml` to your server and create a `.env`:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+GROCY_URL=http://your-grocy-host
+GROCY_API_TOKEN=your_token
 ```
 
-The frontend runs on **http://localhost:3000**
-
-### 4. Access the App
-
-Open your browser to **http://localhost:3000**
-
-## Environment Variables
-
-### Backend (.env)
-| Variable | Description |
-|----------|-------------|
-| `PORT` | Server port (default: 5000) |
-| `GROCY_URL` | Your Grocy instance URL |
-| `GROCY_API_TOKEN` | API token from Grocy settings |
-| `NODE_ENV` | Set to `production` for deployment |
-
-## API Endpoints
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/health` | GET | Check connection status |
-| `/api/products` | GET | List all products |
-| `/api/products/:id` | GET | Get single product |
-| `/api/stock` | GET | Get all stock levels |
-| `/api/stock/add` | POST | Add items to stock |
-| `/api/stock/remove` | POST | Remove items from stock |
-
-## Production Deployment
-
-1. Build the frontend:
 ```bash
-cd frontend
-npm run build
+docker compose up -d
 ```
 
-2. Set `NODE_ENV=production` in backend `.env`
+Then reverse-proxy port `5000` with Nginx, Caddy, or Traefik.
 
-3. Start backend:
-```bash
-cd backend
-npm start
-```
+## NFC Tags
 
-The backend will serve the frontend from `frontend/dist/`
+Program NFC stickers with URLs to open filtered views instantly:
 
-## Troubleshooting
+| Tag location | URL |
+|---|---|
+| Fridge door | `http://your-app/?location=<id>` |
+| Snack cabinet | `http://your-app/?location=<id>` |
+| Specific item | `http://your-app/?product=<id>` |
 
-### "Cannot connect to Grocy"
-- Verify `GROCY_URL` is correct in `.env`
-- Check your Grocy instance is running
-- Ensure the API token is valid
+Find location and product IDs at `http://your-server:5000/api/locations` and `/api/products`.
 
-### Products not showing
-- Confirm API token has read access
-- Check browser console for errors
-- Test API directly: `curl -H "GROCY-API-KEY: your_token" http://localhost:81/api/objects/products`
-
-### Port already in use
-- Change `PORT` in backend `.env`
-- Change `port` in frontend `vite.config.js`
+Use [NFC Tools](https://www.wakdev.com/en/apps/nfc-tools.html) (iOS/Android) to write URL records to your tags.
 
 ## Development
 
-Frontend uses:
-- **React 18** - UI framework
-- **Vite** - Fast dev server & build tool
+### Prerequisites
+- Node.js 20+
+- A running Grocy instance
 
-Backend uses:
-- **Express** - Web framework
-- **CORS** - Cross-origin requests
-- **Node native fetch** - API calls
+### Setup
+
+```bash
+# Backend
+cd backend
+cp .env.example .env
+# Edit .env with your GROCY_URL and GROCY_API_TOKEN
+npm install
+npm start        # runs on :5000
+
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run dev      # runs on :3000
+```
+
+Or use the VSCode task **Run All (Backend + Frontend)**.
+
+### Environment Variables
+
+| Variable | Description |
+|---|---|
+| `GROCY_URL` | Your Grocy base URL (e.g. `http://grocy.local:81`) — with or without `/api` |
+| `GROCY_API_TOKEN` | API token from Grocy → Settings → Manage API keys |
+| `PORT` | Backend port (default: `5000`) |
+| `NODE_ENV` | Set to `production` to serve the built frontend |
+
+### Production Build
+
+```bash
+cd frontend && npm run build
+# Set NODE_ENV=production in backend/.env
+cd backend && npm start
+```
+
+The backend serves `frontend/dist/` when `NODE_ENV=production`.
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/health` | GET | Grocy connectivity check |
+| `/api/products` | GET | All products |
+| `/api/stock` | GET | Current stock levels |
+| `/api/quantity-units` | GET | Unit names |
+| `/api/locations` | GET | Grocy locations |
+| `/api/users` | GET | Grocy users |
+| `/api/stock/add` | POST | Add stock |
+| `/api/stock/remove` | POST | Consume stock |
 
 ## License
 
-MIT - Use freely!
-
-## Support
-
-Issues? Check your Grocy instance and API token first. Refer to [Grocy API docs](https://grocy.info/en/documentation/api) for more info.
+MIT
